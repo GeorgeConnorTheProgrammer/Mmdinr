@@ -1,2 +1,4 @@
 .vscode
 *.csv
+*.exe
+*.o
