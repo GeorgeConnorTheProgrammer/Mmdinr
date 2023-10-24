@@ -1,6 +1,8 @@
 #include <iostream>
 #include <numeric>
 #include <array>
+#include <cmath>
+
 
 namespace CD
 {
@@ -92,10 +94,18 @@ namespace MFRT
 
   double g_i = 0.1; // Generation of interstitials due to radiation
   double g_v = 0.1; // Generation of vacancies due to radiation
-
-  double D_i = 0.4; // Interstitial diffusion coefficient
-  double D_v = 0.6; // Vacancy diffusion coefficient
-
+  
+  // using Material parameters from SA304
+  double D_0i = 0.010; //cm2/s
+  double D_0v = 0.6; //cm2/s
+  double E_mv = 1.35; //eV
+  double E_mi = 0.45; //eV
+  double k = 8.6173 * std::pow(10,-5); //eV K^-1 k is the Boltzmann constant
+  double Temp = 300; //Temperature in Kelvin
+  
+  double D_i = D_0i * std::exp(-(E_mi/(k*Temp))); // Interstitial diffusion coefficient
+  double D_v = D_0v * std::exp(-(E_mv/(k*Temp))); // Vacancy diffusion coefficient
+  
   double k_iv = 0.5; // Recombination rate constant
 
   // Interstitial sink partial strengths
