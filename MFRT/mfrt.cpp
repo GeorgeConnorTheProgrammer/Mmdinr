@@ -3,8 +3,6 @@
 #include <array>
 #include <cmath>
 
-namespace MFRT
-{
   // Physical parameters
 
   double C_i = 0.0; // Concentration of interstitials
@@ -37,24 +35,23 @@ namespace MFRT
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
 		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
     
-		std::cout << "C_i, C_v" << std::endl;
+		std::cout << "C_i, C_v, sinkIntakeDiff" << std::endl;
 
     for (double t = 0; t < end_time; t += dt) 
     {
-      double dC_i = (K_0 - K_iv * C_i * C_v - K_vs * C_i * C_s) * dt;
-      double dC_v = (K_0 - K_iv * C_i * C_v - K_is * C_v * C_s) * dt;
+      double dC_i = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
+      double dC_v = (K_0 - K_iv * C_i * C_v - K_vs * C_v * C_s) * dt;
       if (std::isinf(dC_i) || std::isinf(dC_v) || std::isnan(dC_i) || std::isnan(dC_v))
       {
-	 std::cout << "limit reached stopping model.." << std::endl;
+	 std::cerr << "limit reached stopping model.." << std::endl;
 	 break; 
       }
       C_i = C_i + dC_i, 0.0;
       C_v = C_v + dC_v, 0.0;
 
-      std::cout << C_i << "," << C_v << std::endl;
+      std::cout << std::log(C_i) << "," << std::log(C_v) << ", " << std::log(K_is * C_i * C_s - K_vs * C_v * C_s) << std::endl;
     }
   }
-}
 
 int main(int argc, char** argv)
 {
@@ -65,13 +62,13 @@ int main(int argc, char** argv)
 		return 1;
   }
 
-  double dt = atof(argv[1]);
-  int steps = atoi(argv[2]);
+  double dt = atof(argv[1]); // seconds
+  int time = atoi(argv[2]); // seconds
   double Temp = atof(argv[3]);
   int K_0_exp = atoi(argv[4]);
   int C_s_exp = atoi(argv[5]);
 
-  MFRT::run_model(dt, steps, Temp, K_0_exp, C_s_exp);
+  MFRT::run_model(dt, time, Temp, K_0_exp, C_s_exp);
 
   return 0;
 }
