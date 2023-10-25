@@ -11,7 +11,7 @@ namespace MFRT
   double C_v = 0.0; // Concentration of vacancies
  
   // using Material parameters from SA304
-  double D_0i = 0.010; //cm2/s
+  double D_0i = 0.001; //cm2/s
   double D_0v = 0.6; //cm2/s
   double E_mv = 1.35; //eV
   double E_mi = 0.45; //eV
