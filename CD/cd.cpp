@@ -16,6 +16,7 @@ std::array<Species, NUM_SPECIES> species{};
 std::array<Species, NUM_SPECIES> out_species{};
 
 std::array<double, NUM_SPECIES * NUM_SPECIES> reaction_rates{};
+std::array<double, NUM_SPECIES * NUM_SPECIES> dissociation_rates{};
 
 void populateSpecies()
 {
@@ -27,8 +28,10 @@ void populateSpecies()
     species[i].k_2 = 0.01;
   }
 
-  for (int i = 0; i < reaction_rates.size(); ++i) {
+  // TODO - very important, give these values that are at least mass-conservative
+  for (int i = 0; i < NUM_SPECIES * NUM_SPECIES; ++i) {
     reaction_rates[i] = 0.1;
+    dissociation_rates[i] = 0.0;
   }
 }
 
@@ -36,33 +39,28 @@ void runStep(double dt)
 {
   std::copy(species.begin(), species.end(), out_species.begin());
 
-  for (int i = 0; i < species.size(); ++i) 
+  for (int i = 0; i < species.size(); ++i) // Compute the change in concentration for each cluster species
   {
     Species& s = species[i];
 
-    // TODO
-    double R_gain_by_combination = 0.0;
-    double R_loss_by_combination = 0.0;
-    double R_gain_by_dissociation = 0.0;
-    double R_loss_by_dissociation = 0.0;
+    double combination_rate = 0.0; // Rate of change of concentration of species i due to combination of other clusters
+    double dissociation_rate = 0.0; // Rate of change of concentration of species i due to dissociation
 
     for (int i = 0; i < species.size(); ++i) {
       for (int j = 0; j < species.size(); ++j) {
         if (i == j) continue;
 
-        R_gain_by_combination += dt * reaction_rates[NUM_SPECIES * j + i] * species[i].C + species[j].C;
+        combination_rate += reaction_rates[NUM_SPECIES * j + i] * species[i].C * species[j].C; // Species j becomes species i
+        combination_rate -= reaction_rates[NUM_SPECIES * i + j] * species[j].C * species[i].C; // Species i becomes species j
         
-        R_loss_by_combination += 0.0;
-        R_gain_by_dissociation += 0.0;
-        R_loss_by_dissociation += 0.0;
+	dissociation_rate += dissociation_rates[NUM_SPECIES * j + i] * species[j]; // Species j becomes species i
+        dissociation_rate -= dissociation_rates[NUM_SPECIES * i + j] * species[i]; // Species i becomes species j
       }
     }
 
 
-    double R = R_gain_by_combination + R_loss_by_combination
-              + R_gain_by_dissociation + R_loss_by_dissociation;
-
-    double dC = dt * (-s.div_flux + s.g + R - s.D * s.k_2 * s.C);
+    double R = combination_rate + dissociation_rate;
+    double dC = dt * (-s.div_flux + s.g + R - s.D * s.k_2 * s.C); // TODO - investigate ways to deal with "stiff equations"
 
     out_species[i].C += dC;
   }
