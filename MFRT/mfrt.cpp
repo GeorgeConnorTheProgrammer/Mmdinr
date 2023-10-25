@@ -1,74 +1,77 @@
 #include <iostream>
 #include <numeric>
 #include <array>
+#include <cmath>
 
-namespace CD
+namespace MFRT
 {
-}
+  // Physical parameters
 
-// Physical parameters
+  double C_i = 0.0; // Concentration of interstitials
+  double C_v = 0.0; // Concentration of vacancies
+ 
+  // using Material parameters from SA304
+  double D_0i = 0.001; //cm2/s
+  double D_0v = 0.6; //cm2/s
+  double E_mv = 1.35; //eV
+  double E_mi = 0.45; //eV
+  double k = 8.6173 * std::pow(10,-5); //eV K^-1 k is the Boltzmann constant
+	double r_iv = 7 * std::pow(10,-8); //should be 7nm but the simulation is in cm
 
-double C_i = 0.0; // Concentration of interstitials
-double C_v = 0.0; // Concentration of vacancies
+	// We can assume r_vs = r_is = 10^-4 cm according to 10-19-23 slides.
+	double r_vs = std::pow(10,-4);
+	double r_is = r_vs;
 
-double g_i = 0.1; // Generation of interstitials due to radiation
-double g_v = 0.1; // Generation of vacancies due to radiation
-
-double D_i = 0.4; // Interstitial diffusion coefficient
-double D_v = 0.6; // Vacancy diffusion coefficient
-
-double k_iv = 0.5; // Recombination rate constant
-
-// Interstitial sink partial strengths
-std::array<double, 3> i_sinks {
-  0.01, 0.12, 0.28
-};
-
-// Vacancy sink partial strengths
-std::array<double, 3> v_sinks {
-  0.01, 0.8, 0.18
-};
-
-double k_i_2 = 0.0; // Total sink strength for removal of interstitials
-double k_v_2 = 0.0; // Total sink strength for removal of vacancies
-
-// Additional simulation state
-
-double t = 0.0;
-
-// Run the simulation
-
-void runModel(double dt, int steps) 
-{
-  k_i_2 = std::accumulate(i_sinks.begin(), i_sinks.end(), 0.0, std::plus<double>());
-  k_v_2 = std::accumulate(v_sinks.begin(), v_sinks.end(), 0.0, std::plus<double>());
-
-  std::cout << "Ci, Cv" << std::endl;
-
-  for (int i = 0; i < steps; ++i) 
+  // Run the simulation
+  void run_model(double dt, int steps, double Temp, int K_0_exp, int C_s_exp) 
   {
-    double dC_i = (g_i - k_iv * C_i * C_v - D_i * k_i_2 * C_i) * dt;
-    double dC_v = (g_v - k_iv * C_i * C_v - D_v * k_v_2 * C_v) * dt;
+		// running variable init
+		// Calculating the D_i and D_v.
+		double D_i = D_0i * std::exp(-(E_mi/(k*Temp))); // Interstitial diffusion coefficient
+		double D_v = D_0v * std::exp(-(E_mv/(k*Temp))); // Vacancy diffusion coefficient		
+		
+		double K_0 = std::pow(10,K_0_exp); //defect production rate
+		double C_s = std::pow(10,C_s_exp); //Mentioned in 10-19-23 rate theory slides, needs clarification..
 
-    C_i += dC_i;
-    C_v += dC_v;
+		double K_iv = 4.0 * M_PI * r_iv * (D_i + D_v); // vancancy-interstitial recombination rate coeff
+		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
+		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
+    
+		std::cout << "Ci, Cv" << std::endl;
 
-    std::cout << "" << C_i << "," << C_v << std::endl;
+    for (int i = 0; i < steps; ++i) 
+    {
+      double dC_i = (K_0 - K_iv * C_i * C_v - K_vs * C_i * C_s) * dt;
+      double dC_v = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
+			if (std::isinf(dC_i) || std::isinf(dC_v) || (dC_i != dC_i || dC_v != dC_v))
+			{
+				std::cout << "limit reached stopping model.." << std::endl;
+				break; 
+			}
+      C_i += dC_i;
+      C_v += dC_v;
+
+      std::cout << "" << C_i << "," << C_v << std::endl;
+    }
   }
 }
 
-
 int main(int argc, char** argv)
 {
-  if (argc < 3) 
+  if (argc < 5) 
   {
-    std::cout << "Too few args. Usage: test [dt] [steps]" << std::endl;
-    return 1;
+    std::cout << "Too few args. Usage: test [dt] [steps] [Temp] [K_0 (exp.)] [C_s (exp.)]" << std::endl;
+    std::cout << "(K_0 and C_s are in orders of magnitude.)" << std::endl;
+		return 1;
   }
 
   double dt = atof(argv[1]);
   int steps = atoi(argv[2]);
+	double Temp = atof(argv[3]);
+	int K_0_exp = atoi(argv[4]);
+	int C_s_exp = atoi(argv[5]);
 
-  runModel(dt, steps);
+  MFRT::run_model(dt, steps, Temp, K_0_exp, C_s_exp);
+
   return 0;
 }
