@@ -2,7 +2,9 @@
 #include <fstream>
 #include <numeric>
 #include <array>
-#include <cmath>
+
+#define _USE_MATH_DEFINES
+#include<cmath>
 
 #include "../vendor/nlohmann/json.hpp"
 
