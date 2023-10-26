@@ -61,18 +61,16 @@ namespace MFRT
 
 int main(int argc, char** argv)
 {
-  if (argc < 2) 
+  const std::string config_file_name = argc < 2 ? "config.json" : argv[1];
+
+  std::ifstream config_file(config_file_name);
+  if (!config_file.good()) 
   {
-    std::cerr << "Too few args. Usage: mfrt [config file name]" << std::endl;
-		return 1;
-  }
-
-  std::ifstream config_file(argv[1]);
-  if (!config_file.good()) {
     std::cerr << "Could not open " << argv[1] << std::endl;
+    return 1;
   }
-  nlohmann::json config = nlohmann::json::parse(config_file);
 
+  nlohmann::json config = nlohmann::json::parse(config_file);
   double time = config["total_time_seconds"];
   double dt = config["dt_seconds"];
 	double Temp = config["temperature_kelvin"];
