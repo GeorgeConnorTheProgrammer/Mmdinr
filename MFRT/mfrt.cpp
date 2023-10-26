@@ -28,7 +28,7 @@ namespace MFRT
 	double r_is = r_vs;
 
   // Run the simulation
-  void run_model(double dt, int steps, double Temp, int K_0_exp, int C_s_exp) 
+  void run_model(double sample_skip, double dt, int endtime, double Temp, int K_0_exp, int C_s_exp) 
   {
 		// running variable init
 		// Calculating the D_i and D_v.
@@ -42,21 +42,29 @@ namespace MFRT
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
 		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
     
-		std::cout << "Ci, Cv" << std::endl;
+		std::cout << "t, Ci, Cv" << std::endl;
 
-    for (int i = 0; i < steps; ++i) 
+    int sample_counter = sample_skip;
+    for (double t = 0.0; t < endtime; t += dt) 
     {
-      double dC_i = (K_0 - K_iv * C_i * C_v - K_vs * C_i * C_s) * dt;
-      double dC_v = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
-			if (std::isinf(dC_i) || std::isinf(dC_v) || dC_i != dC_i || dC_v != dC_v)
+      double dC_i = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
+      double dC_v = (K_0 - K_iv * C_i * C_v - K_vs * C_v * C_s) * dt;
+
+			if (std::isinf(dC_i) || std::isinf(dC_v) || std::isnan(dC_i) || std::isnan(dC_v))
 			{
-				std::cout << "limit reached stopping model.." << std::endl;
-				break; 
+				std::cerr << "Limit reached stopping model.." << std::endl;
+				return; 
 			}
+
       C_i += dC_i;
       C_v += dC_v;
 
-      std::cout << "" << C_i << "," << C_v << std::endl;
+      sample_counter += 1;
+      if (sample_counter >= sample_skip)
+      {
+        sample_counter = 0;
+        std::cout << t << ", " << C_i << ", " << C_v << "\n";
+      }
     }
   }
 }
@@ -68,7 +76,7 @@ int main(int argc, char** argv)
   std::ifstream config_file(config_file_name);
   if (!config_file.good()) 
   {
-    std::cerr << "Could not open " << argv[1] << std::endl;
+    std::cerr << "Could not open " << config_file_name << std::endl;
     return 1;
   }
 
@@ -79,7 +87,9 @@ int main(int argc, char** argv)
 	int K_0_exp = config["K_0_exp"];
 	int C_s_exp = config["C_s_exp"];
 
-  MFRT::run_model(dt, time, Temp, K_0_exp, C_s_exp);
+  double sample_skip = config["sample_skip"];
+
+  MFRT::run_model(sample_skip, dt, time, Temp, K_0_exp, C_s_exp);
 
   return 0;
 }
