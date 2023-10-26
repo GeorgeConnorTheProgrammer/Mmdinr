@@ -1,7 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <numeric>
 #include <array>
 #include <cmath>
+
+#include "../vendor/nlohmann/json.hpp"
 
 namespace MFRT
 {
@@ -43,7 +46,7 @@ namespace MFRT
     {
       double dC_i = (K_0 - K_iv * C_i * C_v - K_vs * C_i * C_s) * dt;
       double dC_v = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
-			if (std::isinf(dC_i) || std::isinf(dC_v) || (dC_i != dC_i || dC_v != dC_v))
+			if (std::isinf(dC_i) || std::isinf(dC_v) || dC_i != dC_i || dC_v != dC_v)
 			{
 				std::cout << "limit reached stopping model.." << std::endl;
 				break; 
@@ -58,20 +61,25 @@ namespace MFRT
 
 int main(int argc, char** argv)
 {
-  if (argc < 5) 
+  if (argc < 2) 
   {
-    std::cout << "Too few args. Usage: test [dt] [steps] [Temp] [K_0 (exp.)] [C_s (exp.)]" << std::endl;
-    std::cout << "(K_0 and C_s are in orders of magnitude.)" << std::endl;
+    std::cerr << "Too few args. Usage: mfrt [config file name]" << std::endl;
 		return 1;
   }
 
-  double dt = atof(argv[1]);
-  int steps = atoi(argv[2]);
-	double Temp = atof(argv[3]);
-	int K_0_exp = atoi(argv[4]);
-	int C_s_exp = atoi(argv[5]);
+  std::ifstream config_file(argv[1]);
+  if (!config_file.good()) {
+    std::cerr << "Could not open " << argv[1] << std::endl;
+  }
+  nlohmann::json config = nlohmann::json::parse(config_file);
 
-  MFRT::run_model(dt, steps, Temp, K_0_exp, C_s_exp);
+  double time = config["total_time_seconds"];
+  double dt = config["dt_seconds"];
+	double Temp = config["temperature_kelvin"];
+	int K_0_exp = config["K_0_exp"];
+	int C_s_exp = config["C_s_exp"];
+
+  MFRT::run_model(dt, time, Temp, K_0_exp, C_s_exp);
 
   return 0;
 }
