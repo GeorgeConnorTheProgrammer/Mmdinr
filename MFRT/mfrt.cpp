@@ -1,7 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <numeric>
 #include <array>
-#include <cmath>
+
+#define _USE_MATH_DEFINES
+#include<cmath>
+
+#include "../vendor/nlohmann/json.hpp"
 
   // Physical parameters
 
@@ -21,7 +26,7 @@
   double r_is = r_vs;
 
   // Run the simulation
-  void run_model(double dt, double end_time, double Temp, int K_0_exp, int C_s_exp) 
+  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp) 
   {
 		// running variable init
 		// Calculating the D_i and D_v.
@@ -35,40 +40,55 @@
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
 		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
     
-		std::cout << "C_i, C_v, sinkIntakeDiff" << std::endl;
+		std::cout << "t, Ci, Cv, sink_diff" << std::endl;
 
-    for (double t = 0; t < end_time; t += dt) 
+    double sample_counter = sample_interval;
+    for (double t = 0.0; t < endtime; t += dt) 
     {
       double dC_i = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
       double dC_v = (K_0 - K_iv * C_i * C_v - K_vs * C_v * C_s) * dt;
-      if (std::isinf(dC_i) || std::isinf(dC_v) || std::isnan(dC_i) || std::isnan(dC_v))
-      {
-	 std::cerr << "limit reached stopping model.." << std::endl;
-	 break; 
-      }
-      C_i = C_i + dC_i, 0.0;
-      C_v = C_v + dC_v, 0.0;
 
-      std::cout << std::log(C_i) << "," << std::log(C_v) << ", " << std::log(K_is * C_i * C_s - K_vs * C_v * C_s) << std::endl;
+			if (std::isinf(dC_i) || std::isinf(dC_v) || std::isnan(dC_i) || std::isnan(dC_v))
+			{
+				std::cerr << "Limit reached stopping model.." << std::endl;
+				return; 
+			}
+
+      C_i += dC_i;
+      C_v += dC_v;
+
+      sample_counter += dt;
+      if (sample_counter >= sample_interval)
+      {
+        sample_counter = 0.0;
+        std::cout << t << ", " << C_i << ", " << C_v << ", " << K_is * C_i * C_s - K_vs * C_v * C_s << "\n";
+      }
     }
+
+    std::cerr << "Finished simulation" << std::endl;
   }
 
 int main(int argc, char** argv)
 {
-  if (argc < 5) 
+  const std::string config_file_name = argc < 2 ? "config.json" : argv[1];
+
+  std::ifstream config_file(config_file_name);
+  if (!config_file.good()) 
   {
-    std::cout << "Too few args. Usage: test [dt] [steps] [Temp] [K_0 (exp.)] [C_s (exp.)]" << std::endl;
-    std::cout << "(K_0 and C_s are in orders of magnitude.)" << std::endl;
-		return 1;
+    std::cerr << "Could not open " << config_file_name << std::endl;
+    return 1;
   }
 
-  double dt = atof(argv[1]); // seconds
-  int time = atoi(argv[2]); // seconds
-  double Temp = atof(argv[3]);
-  int K_0_exp = atoi(argv[4]);
-  int C_s_exp = atoi(argv[5]);
+  nlohmann::json config = nlohmann::json::parse(config_file);
+  double time = config["total_time_seconds"];
+  double dt = config["dt_seconds"];
+	double Temp = config["temperature_kelvin"];
+	int K_0_exp = config["K_0_exp"];
+	int C_s_exp = config["C_s_exp"];
 
-  MFRT::run_model(dt, time, Temp, K_0_exp, C_s_exp);
+  double sample_interval = config["sample_interval"];
+
+  run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp);
 
   return 0;
 }

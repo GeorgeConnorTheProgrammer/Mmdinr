@@ -53,8 +53,8 @@ void runStep(double dt)
         combination_rate += reaction_rates[NUM_SPECIES * j + i] * species[i].C * species[j].C; // Species j becomes species i
         combination_rate -= reaction_rates[NUM_SPECIES * i + j] * species[j].C * species[i].C; // Species i becomes species j
         
-	dissociation_rate += dissociation_rates[NUM_SPECIES * j + i] * species[j]; // Species j becomes species i
-        dissociation_rate -= dissociation_rates[NUM_SPECIES * i + j] * species[i]; // Species i becomes species j
+	dissociation_rate += dissociation_rates[NUM_SPECIES * j + i] * species[j].C; // Species j becomes species i
+        dissociation_rate -= dissociation_rates[NUM_SPECIES * i + j] * species[i].C; // Species i becomes species j
       }
     }
 
