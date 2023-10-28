@@ -28,7 +28,7 @@ namespace MFRT
 	double r_is = r_vs;
 
   // Run the simulation
-  void run_model(double sample_skip, double dt, int endtime, double Temp, int K_0_exp, int C_s_exp) 
+  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp) 
   {
 		// running variable init
 		// Calculating the D_i and D_v.
@@ -42,9 +42,9 @@ namespace MFRT
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
 		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
     
-		std::cout << "t, Ci, Cv" << std::endl;
+		std::cout << "t, Ci, Cv, sink_diff" << std::endl;
 
-    int sample_counter = sample_skip;
+    double sample_counter = sample_interval;
     for (double t = 0.0; t < endtime; t += dt) 
     {
       double dC_i = (K_0 - K_iv * C_i * C_v - K_is * C_i * C_s) * dt;
@@ -59,13 +59,15 @@ namespace MFRT
       C_i += dC_i;
       C_v += dC_v;
 
-      sample_counter += 1;
-      if (sample_counter >= sample_skip)
+      sample_counter += dt;
+      if (sample_counter >= sample_interval)
       {
-        sample_counter = 0;
-        std::cout << t << ", " << C_i << ", " << C_v << "\n";
+        sample_counter = 0.0;
+        std::cout << t << ", " << C_i << ", " << C_v << ", " << K_is * C_i * C_s - K_vs * C_v * C_s << "\n";
       }
     }
+
+    std::cerr << "Finished simulation" << std::endl;
   }
 }
 
@@ -87,9 +89,9 @@ int main(int argc, char** argv)
 	int K_0_exp = config["K_0_exp"];
 	int C_s_exp = config["C_s_exp"];
 
-  double sample_skip = config["sample_skip"];
+  double sample_interval = config["sample_interval"];
 
-  MFRT::run_model(sample_skip, dt, time, Temp, K_0_exp, C_s_exp);
+  MFRT::run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp);
 
   return 0;
 }
