@@ -1,0 +1,34 @@
+name: Build and Create Executable Artifact
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up C++ environment
+        uses: actions/setup-cpp@v1
+        with:
+          compiler: 'gcc'
+
+      - name: Build C++ program
+        run: g++ CD/cd.cpp -o cd -std=c++11 -lstdc++
+
+      - name: Create Executable Artifact
+        run: mv cd /github/workspace/cd
+        shell: bash
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: cd-executable
+          path: cd
+
+      - name: Clean up
+        run: rm /github/workspace/cd
+        shell: bash
