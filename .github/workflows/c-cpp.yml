@@ -23,6 +23,6 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: cd-executable
-          path: CD/cd
+          path: ./CD/cd
 
    
