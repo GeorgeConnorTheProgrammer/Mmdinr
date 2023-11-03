@@ -31,7 +31,7 @@ namespace MFRT
 		double D_v = D_0v * std::exp(-(E_mv/(k*Temp))); // Vacancy diffusion coefficient		
 		
 		double K_0 = std::pow(10,K_0_exp); //defect production rate
-		double C_s = std::pow(10,C_s_exp); //Mentioned in 10-19-23 rate theory slides, needs clarification..
+		double C_s = std::pow(10,C_s_exp); //sink concentration
 
 		double K_iv = 4.0 * M_PI * r_iv * (D_i + D_v); // vancancy-interstitial recombination rate coeff
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.

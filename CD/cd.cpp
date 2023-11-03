@@ -1,80 +1,183 @@
 #include <iostream>
+#include <iomanip>
 #include <numeric>
 #include <array>
+
+#define _USE_MATH_DEFINES
+#include <cmath>
+
+#include "signedarray.hpp"
+
+
+//-----------------------------------------------------------------
+// Simulation Classes
+//-----------------------------------------------------------------
 
 struct Species
 {
   double C = 0.0; // Concentration of this species
-  double div_flux = 0.0; // Divergence of flux. Deserves scrutiny.
   double g = 0.0; // Generation of this cluster species in collision cascades
   double D = 0.0; // Diffusion constant
-  double k_2 = 0.0; // Sink strength
+  double K = 0.0; // Sink strength
+  
+  double r = 0.0; // Reaction radius
+  double r_s = 0.0; // Reaction radius with sinks
 };
 
-constexpr size_t NUM_SPECIES = 2;
-std::array<Species, NUM_SPECIES> species{};
-std::array<Species, NUM_SPECIES> out_species{};
 
-std::array<double, NUM_SPECIES * NUM_SPECIES> reaction_rates{};
-std::array<double, NUM_SPECIES * NUM_SPECIES> dissociation_rates{};
 
-void populateSpecies()
+
+//-----------------------------------------------------------------
+// Simulation State
+//-----------------------------------------------------------------
+
+constexpr int MAX_SIZE = 20;
+SignedArray<Species, MAX_SIZE> species{};
+SignedArray<Species, MAX_SIZE> prev_species{};
+
+SignedArray<SignedArray<double, MAX_SIZE>, MAX_SIZE> reaction_rates;
+SignedArray<SignedArray<double, MAX_SIZE>, MAX_SIZE> dissociation_rates;
+
+
+//-----------------------------------------------------------------
+// Simulation Functions
+//-----------------------------------------------------------------
+
+void print_reaction_rates() {
+  std::cerr << "\n[\n";
+  for (int i = -MAX_SIZE; i < MAX_SIZE; ++i) {
+    for (int j = -MAX_SIZE; j < MAX_SIZE; ++j) {
+      std::cerr << std::setfill(' ') << std::setw(10) << reaction_rates[i][j] << ", ";
+    }
+    std::cerr << "\n";
+  }
+  std::cerr << "]\n";
+}
+
+void initModel()
 {
-  for (int i = 0; i < NUM_SPECIES; ++i) {
-    species[i].C = 0.0;
-    species[i].div_flux = 0.1;
-    species[i].g = 0.2;
-    species[i].D = 0.5;
-    species[i].k_2 = 0.01;
+  // Based on the example case in section 4.4 of the Kohnert paper
+
+  for (int i = -reaction_rates.size(); i < reaction_rates.size(); ++i) {
+    for (int j = -reaction_rates.size(); j < reaction_rates.size(); ++j) {
+      reaction_rates[i][j] = -42.0;
+    }
   }
 
-  // TODO - very important, give these values that are at least mass-conservative
-  for (int i = 0; i < NUM_SPECIES * NUM_SPECIES; ++i) {
-    reaction_rates[i] = 0.1;
-    dissociation_rates[i] = 0.0;
+  const double T = 300; // Temperature in Kelvin
+  const double atomic_volume = 0.0118; // Atomic volume in nm^3
+
+  const double E_mv = 0.67; //Migration energy of point vacancies in eV
+  const double E_mi = 0.34; //Migration energy of point interstitials in eV
+  const double k = 8.6173 * std::pow(10,-5); //eV K^-1 k is the Boltzmann constant
+
+  species[1].D = std::pow(10, 11) * std::exp(-E_mi / (k * T));
+  species[-1].D = std::pow(10, 11) * std::exp(-E_mv / (k * T));
+
+  for (int i = -MAX_SIZE; i < MAX_SIZE; ++i) {
+    if (i == 0) continue;
+
+    species[i].r = std::cbrt(3 * std::abs(i) * atomic_volume / (4 * M_PI)); // TODO - Should we really assume all clusters are spherical?
+
+    for (int j = -MAX_SIZE; j < MAX_SIZE; ++j) { // Calculate reaction rate coefficients
+      if (j == 0) continue;
+
+      if (i + j < MAX_SIZE && i + j > -MAX_SIZE) {
+        const double r_ij = species[i].r + species[j].r;
+        reaction_rates[i][j] = 4 * M_PI * r_ij * species[i].D;
+        reaction_rates[j][i] = 4 * M_PI * r_ij * species[j].D;
+      }
+    }
+
+    dissociation_rates[i][i-1] = 0.0; // TODO
+    dissociation_rates[i][i-1] = 0.0;
   }
+
+  species[1].g = 0.001;
+  species[1].r_s = std::pow(10, 3);
+  species[1].K = 4 * M_PI * species[1].r_s * species[1].D;
+
+  species[-1].g = 0.001;
+  species[-1].r_s = std::pow(10, 3);
+  species[-1].K = 4 * M_PI * species[1].r_s * species[1].D;
+  
+  prev_species.set(species);
+}
+
+double calculate_reaction_rate(int i) {
+    double j_plus_k_equals_i = 0.0; // Run through all reactions that can create i
+    for (int j = -MAX_SIZE; j <= MAX_SIZE; ++j)
+    {
+      if (j == 0 || j == i) continue;
+      double k = i - j;
+      if (k < -MAX_SIZE || k > MAX_SIZE) continue;
+      j_plus_k_equals_i += reaction_rates[j][k] * species[j].C * species[k].C;
+    }
+
+    double i_plus_j_equals_k = 0.0; // Run through all reactions that can be created using i
+    for (int j = -MAX_SIZE; j <= MAX_SIZE; ++j)
+    {
+      if (j == 0) continue;
+      double k = i + j;
+      if (k < -MAX_SIZE || k > MAX_SIZE) continue;
+      i_plus_j_equals_k -= reaction_rates[i][j] * species[i].C * species[j].C;
+    }
+    double combination_rate = j_plus_k_equals_i - i_plus_j_equals_k;
+    
+    double dissociation_rate = 0.0;
+
+    return combination_rate + dissociation_rate;
 }
 
 void runStep(double dt)
 {
-  std::copy(species.begin(), species.end(), out_species.begin());
-
-  for (int i = 0; i < species.size(); ++i) // Compute the change in concentration for each cluster species
+  for (int i = -MAX_SIZE; i <= MAX_SIZE; ++i) // Compute the change in concentration for each cluster species
   {
+    if (i == 0) continue;
+
     Species& s = species[i];
 
-    double combination_rate = 0.0; // Rate of change of concentration of species i due to combination of other clusters
-    double dissociation_rate = 0.0; // Rate of change of concentration of species i due to dissociation
+    double R = calculate_reaction_rate(i);
+    double dC = dt * (s.g + R);
 
-    for (int i = 0; i < species.size(); ++i) {
-      for (int j = 0; j < species.size(); ++j) {
-        if (i == j) continue;
-
-        combination_rate += reaction_rates[NUM_SPECIES * j + i] * species[i].C * species[j].C; // Species j becomes species i
-        combination_rate -= reaction_rates[NUM_SPECIES * i + j] * species[j].C * species[i].C; // Species i becomes species j
-        
-	dissociation_rate += dissociation_rates[NUM_SPECIES * j + i] * species[j].C; // Species j becomes species i
-        dissociation_rate -= dissociation_rates[NUM_SPECIES * i + j] * species[i].C; // Species i becomes species j
-      }
-    }
-
-
-    double R = combination_rate + dissociation_rate;
-    double dC = dt * (-s.div_flux + s.g + R - s.D * s.k_2 * s.C); // TODO - investigate ways to deal with "stiff equations"
-
-    out_species[i].C += dC;
+    s.C += dC;
   }
+
+  prev_species.set(species);
 }
 
-void runModel(double dt, int steps)
+void runModel(double dt, double total_time)
 {
-  populateSpecies();
+  initModel();
+  print_reaction_rates();
 
-  for (int i = 0; i < steps; ++i)
+  std::cout << "t";
+  for (int i = -MAX_SIZE; i <= MAX_SIZE; ++i)
+  {
+    if (i == 0) continue;
+    std::cout << ", C_" << i; 
+  }
+  std::cout << "\n";
+
+  for (double t = 0; t < total_time; t += dt)
   {
     runStep(dt);
   }
+
+  std::cout << total_time;
+  for (int i = -MAX_SIZE; i <= MAX_SIZE; ++i) {
+    if (i == 0) continue;
+    std::cout << ", " << std::log(species[i].C + 1);
+  }
+  std::cout << "\n";
 }
+
+
+
+
+//-----------------------------------------------------------------
+// Main
+//-----------------------------------------------------------------
 
 int main(int argc, char** argv)
 {
@@ -85,8 +188,8 @@ int main(int argc, char** argv)
   }
 
   double dt = atof(argv[1]);
-  int steps = atoi(argv[2]);
+  double total_time = atof(argv[2]);
 
-  runModel(dt, steps);
+  runModel(dt, total_time);
   return 0;
 }
