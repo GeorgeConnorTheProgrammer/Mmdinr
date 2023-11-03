@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <stdlib.h>
 
 template<typename T, size_t S>
