@@ -1,0 +1,9 @@
+{
+  "total_time_seconds": 1000,
+  "dt_seconds": 100,
+  "temperature_kelvin": 350,
+  "K_0_exp": 11,
+  "C_s_exp": 8,
+
+  "sample_interval": 1
+}
