@@ -16,7 +16,8 @@ jobs:
           compiler: 'gcc'
 
       - name: Build C++ program
-        run: g++ CD/cd.cpp -o cd -std=c++11 -lstdc++
+        run: cd CD
+        run: make
 
 
       - name: Upload Executable
