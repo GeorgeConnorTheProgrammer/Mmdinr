@@ -1,6 +1,6 @@
 name: Build and Create Executable Artifact
 
-on: workflow_dispatch
+on: pull_request
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
         with:
           compiler: 'gcc'
 
-      - name: change into directory
+      - name: change into CD directory
         run: cd CD
 
       - name: Build with makefile
