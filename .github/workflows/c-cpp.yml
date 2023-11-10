@@ -15,8 +15,10 @@ jobs:
         with:
           compiler: 'gcc'
 
-      - name: Build C++ program
+      - name: change into directory
         run: cd CD
+
+      - name: Build with makefile
         run: make
 
 
