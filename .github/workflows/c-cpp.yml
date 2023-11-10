@@ -18,8 +18,8 @@ jobs:
       - name: change into the CD directory
         run: cd CD
 
-      - name: Build with makefile
-        run: make
+      - name: Build 
+        run: g++ -std=c++17 src/main.cpp src/cd.cpp -o cd.exe
 
 
       - name: Upload Executable
