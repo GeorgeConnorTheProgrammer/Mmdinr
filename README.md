@@ -35,3 +35,4 @@ _These definitions are meant to provide a basic understanding of the program, an
 - **vacancy**: Empty spot left by an atom out of place
 - **point defect**: Any "disruption" to the crystal structure. In this case, either an interstitial or a vacancy.
 - **sink**: Some force/preexisting microstructure that causes the concentration of point defects to go down. For example, the tendency for an "air bubble" to rise to the surface of a metal and disappear could be considered a sink.
+=======
