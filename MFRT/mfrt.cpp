@@ -34,7 +34,7 @@
   double r_is = r_vs;
 
   // Run the simulation
-  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp, TGraph* g1, TGraph* g2, TGraph* g3) 
+  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp, TGraph* g1, TGraph* g2) 
   {
 		// running variable init
 		// Calculating the D_i and D_v.
@@ -66,11 +66,10 @@
       sample_counter += dt;
       if (sample_counter >= sample_interval)
       {
-	double sink_diff = K_is * C_i * C_s - K_vs * C_v * C_s;
+				// double sink_diff = K_is * C_i * C_s - K_vs * C_v * C_s;
         sample_counter = 0.0;
-	g1->AddPoint(t, C_i);
-	g2->AddPoint(t, C_v);
-	g3->AddPoint(t, sink_diff);
+				g1->AddPoint(t, C_i);
+				g2->AddPoint(t, C_v);
       }
     }
 
@@ -110,21 +109,20 @@ int main(int argc, char** argv)
   
   // Define the graphs
   TGraph* ci_graph = new TGraph();
-  // ci_graph->SetMarkerStyle(21);
   TGraph* cv_graph = new TGraph();
-  TGraph* sink_diff_graph = new TGraph();
 
   ci_graph->SetMarkerColor(kRed);
   cv_graph->SetMarkerColor(kBlue);
-  sink_diff_graph->SetMarkerColor(kGreen);
+
+	ci_graph->SetTitle("C_i");
+	cv_graph->SetTitle("C_v");
 
   TMultiGraph* mg = new TMultiGraph();
   
-  run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp, ci_graph, cv_graph, sink_diff_graph);
+  run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp, ci_graph, cv_graph);
   
   mg->Add(ci_graph);
   mg->Add(cv_graph);
-  mg->Add(sink_diff_graph);
 
   mg->SetTitle("MFRT");
   mg->Draw("ALP");
