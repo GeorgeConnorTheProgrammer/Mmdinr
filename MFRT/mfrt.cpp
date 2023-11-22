@@ -1,6 +1,8 @@
 #include <iostream>
 #include <numeric>
 #include <array>
+
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 namespace MFRT

@@ -19,15 +19,15 @@ void runCD(double dt, double total_time)
 
   for (double t = 0; t < total_time; t += dt)
   {
-    std::cout << t;
+
+    cd.Step(dt);
+  }
+    std::cout << total_time;
     for (int i = -cd.MAX_SIZE; i <= cd.MAX_SIZE; ++i) {
       if (i == 0) continue;
       std::cout << ", " << std::log(cd.species[i].C + 1);
     }
     std::cout << "\n";
-
-    cd.Step(dt);
-  }
 }
 
 int main(int argc, char** argv)

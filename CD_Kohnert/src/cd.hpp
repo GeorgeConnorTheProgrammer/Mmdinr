@@ -26,7 +26,7 @@ public:
   static constexpr double E_mi = 0.34; //Migration energy of point interstitials in eV
   static constexpr double k = 8.6173 * 0.00005; //eV K^-1 k is the Boltzmann constant
 
-  static constexpr int MAX_SIZE = 20;
+  static constexpr int MAX_SIZE = 40;
   SignedArray<Species, MAX_SIZE> species{};
   SignedArray<Species, MAX_SIZE> prev_species{};
 
