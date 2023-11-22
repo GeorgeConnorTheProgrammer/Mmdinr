@@ -207,5 +207,5 @@ double CDState::te_i()
 
 double CDState::te_v()
 {
-  return 1.0; // TODO - Pokor Eq 3b
+  return 1.0 // TODO - Pokor Eq 3b
 }
