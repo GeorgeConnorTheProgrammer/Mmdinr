@@ -2,6 +2,14 @@
 #include <fstream>
 #include <numeric>
 #include <array>
+#include "TGraph.h"
+#include "TCanvas.h"
+#include "TGButton.h"
+#include "TGClient.h"
+#include "TMultiGraph.h"
+#include "TApplication.h"
+#include "TRootCanvas.h"
+#include "TF1.h"
 
 #define _USE_MATH_DEFINES
 #include<cmath>
@@ -26,7 +34,7 @@
   double r_is = r_vs;
 
   // Run the simulation
-  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp) 
+  void run_model(double sample_interval, double dt, double endtime, double Temp, int K_0_exp, int C_s_exp, TGraph* g1, TGraph* g2) 
   {
 		// running variable init
 		// Calculating the D_i and D_v.
@@ -39,8 +47,6 @@
 		double K_iv = 4.0 * M_PI * r_iv * (D_i + D_v); // vancancy-interstitial recombination rate coeff
 		double K_is = 4.0 * M_PI * r_is * D_i; // interstitial-sink reaction rate coeff.
 		double K_vs = 4.0 * M_PI * r_vs * D_v; // vancancy-sink reaction rate coeff.
-    
-		std::cout << "t, Ci, Cv, sink_diff" << std::endl;
 
     double sample_counter = sample_interval;
     for (double t = 0.0; t < endtime; t += dt) 
@@ -60,8 +66,10 @@
       sample_counter += dt;
       if (sample_counter >= sample_interval)
       {
+				// double sink_diff = K_is * C_i * C_s - K_vs * C_v * C_s;
         sample_counter = 0.0;
-        std::cout << t << ", " << C_i << ", " << C_v << ", " << K_is * C_i * C_s - K_vs * C_v * C_s << "\n";
+				g1->AddPoint(t, C_i);
+				g2->AddPoint(t, C_v);
       }
     }
 
@@ -70,6 +78,10 @@
 
 int main(int argc, char** argv)
 {
+  // Define the application start point and the name <- args of main.
+  TApplication app("app", &argc, argv);
+  
+  // Simulation ..
   const std::string config_file_name = argc < 2 ? "config.json" : argv[1];
 
   std::ifstream config_file(config_file_name);
@@ -82,13 +94,51 @@ int main(int argc, char** argv)
   nlohmann::json config = nlohmann::json::parse(config_file);
   double time = config["total_time_seconds"];
   double dt = config["dt_seconds"];
-	double Temp = config["temperature_kelvin"];
-	int K_0_exp = config["K_0_exp"];
-	int C_s_exp = config["C_s_exp"];
+  double Temp = config["temperature_kelvin"];
+  int K_0_exp = config["K_0_exp"];
+  int C_s_exp = config["C_s_exp"];
 
   double sample_interval = config["sample_interval"];
+  // Define the 'canvas' aka main window
+  TCanvas* c = new TCanvas("c", "Sim", 0, 0, 800, 600);
+  
+  // c->SetLogy();
+  
+  // TGTextButton *but1 = new TGTextButton("Run Simulation","",.05,.8,.45,.88);
+  // but1->Draw();
+  
+  // Define the graphs
+  TGraph* ci_graph = new TGraph();
+  TGraph* cv_graph = new TGraph();
 
-  run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp);
+  ci_graph->SetMarkerColor(kRed);
+  cv_graph->SetMarkerColor(kBlue);
+
+	ci_graph->SetTitle("C_i");
+	cv_graph->SetTitle("C_v");
+
+  TMultiGraph* mg = new TMultiGraph();
+  
+  run_model(sample_interval, dt, time, Temp, K_0_exp, C_s_exp, ci_graph, cv_graph);
+  
+  mg->Add(ci_graph);
+  mg->Add(cv_graph);
+
+  mg->SetTitle("MFRT");
+  mg->Draw("ALP");
+  
+  // Graph config / color
+  c->Modified(); c->Update();
+  TRootCanvas *rc = (TRootCanvas *)c->GetCanvasImp();
+
+  // Term app on window close
+  rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  
+  // Simulation ..
+
+  // App run
+  app.Run();
+
 
   return 0;
 }
