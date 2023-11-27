@@ -15,14 +15,19 @@ jobs:
         with:
           compiler: 'gcc'
 
-      - name: Build C++ program
-        run: g++ CD/cd.cpp -o cd -std=c++11 -lstdc++
+      - name: Build MFRT
+        run: g++ MFRT/mfrt.cpp -o MFRT/mfrt -std=c++11 -lstdc++
 
+      - name: Build Kohnert CD
+        run: (cd CD_Kohnert && make)
+
+      - name: Build Pokor CD
+        run: (cd CD_Pokor && make)
 
       - name: Upload Executable
         uses: actions/upload-artifact@v2
         with:
           name: cd-executable
-          path: cd
+          path: CD_Kohnert/cd
 
    
