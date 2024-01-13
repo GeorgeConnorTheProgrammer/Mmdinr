@@ -15,9 +15,6 @@ jobs:
         with:
           compiler: 'gcc'
 
-      - name: Build MFRT
-        run: g++ MFRT/mfrt.cpp -o MFRT/mfrt -std=c++11 -lstdc++
-
       - name: Build Kohnert CD
         run: (cd CD_Kohnert && make)
 
